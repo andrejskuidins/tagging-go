@@ -1,15 +1,17 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"encoding/json"
+	"os"
 )
 
 type HealthCheck struct {
-    Status string `json:"status"`
+	Status string `json:"status"`
 }
 
 func main() {
@@ -35,5 +37,22 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%s", body)
+
+	var compactJSON bytes.Buffer
+	if err := json.Compact(&compactJSON, body); err != nil {
+		log.Fatal(err)
+	}
+
+	f, err := os.OpenFile("workfile.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if _, err := f.Write([]byte(compactJSON.String() + "\n")); err != nil {
+		f.Close() // ignore error; Write error takes precedence
+		log.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%s\n", compactJSON.String())
 }
